@@ -26,9 +26,15 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# THIS IS THE NEW, CRITICAL LINE
 # Install the PHP extension for MySQL
 RUN docker-php-ext-install pdo_mysql
+
+# --- ADD THIS NEW SECTION ---
+# Generate optimized Laravel cache files. This is the fix.
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan view:cache
+# --- END OF NEW SECTION ---
 
 # Configure Apache
 RUN a2enmod rewrite
