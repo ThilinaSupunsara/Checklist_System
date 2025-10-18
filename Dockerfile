@@ -26,6 +26,10 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
+# THIS IS THE NEW, CRITICAL LINE
+# Install the PHP extension for MySQL
+RUN docker-php-ext-install pdo_mysql
+
 # Configure Apache
 RUN a2enmod rewrite
 RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
