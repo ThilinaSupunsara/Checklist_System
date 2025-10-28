@@ -1,11 +1,12 @@
 #!/bin/sh
+
+# Exit immediately if a command fails
 set -e
 
 
-
-# Clear and cache configurations
+# Cache configuration for performance
 php artisan config:cache
 php artisan route:cache
 
-# Start Apache
+# Start the Apache web server
 exec apache2-foreground
