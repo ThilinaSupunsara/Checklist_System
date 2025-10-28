@@ -1,45 +1,33 @@
-# Stage 1: Install dependencies with Composer
-FROM composer:2 AS vendor
-
-WORKDIR /app
-COPY database/ database/
-COPY composer.json composer.json
-COPY composer.lock composer.lock
-
-RUN composer install \
-    --ignore-platform-reqs \
-    --no-interaction \
-    --no-plugins \
-    --no-scripts \
-    --prefer-dist \
-    --optimize-autoloader
-
-# Stage 2: Setup the final application image
+# Use a standard PHP Apache image
 FROM php:8.2-apache
 
-# Copy the vendor folder from the first stage
-COPY --from=vendor /app/vendor/ /var/www/html/vendor/
-# Copy the rest of the application code
-COPY . /var/www/html/
+# Set working directory
+WORKDIR /var/www/html
 
-# Set up permissions
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# 1. Install system dependencies & PHP extensions for Laravel with MySQL
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    && docker-php-ext-install pdo_mysql zip exif pcntl bcmath gd \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install the PHP extension for MySQL
-RUN docker-php-ext-install pdo_mysql
+# 2. Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# --- ADD THIS NEW SECTION ---
-# Generate optimized Laravel cache files. This is the fix.
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
-# --- END OF NEW SECTION ---
-
-# Configure Apache
+# 3. Configure Apache to use Laravel's public folder
+COPY .docker/apache.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
-RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-# Expose port 80 to the web
-EXPOSE 80
+# 4. Copy application code and set permissions
+COPY . /var/www/html
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# 5. Install Composer dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# 6. Add the script that runs when the container starts
+COPY .docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
