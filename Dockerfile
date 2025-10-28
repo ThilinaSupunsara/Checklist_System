@@ -1,24 +1,33 @@
-FROM php:8.2-fpm
+# Use a standard PHP Apache image
+FROM php:8.2-apache
 
-# Install system dependencies
+# Set working directory
+WORKDIR /var/www/html
+
+# 1. Install system dependencies & PHP extensions for Laravel with MySQL
 RUN apt-get update && apt-get install -y \
-    git curl unzip libpq-dev libonig-dev libzip-dev zip \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip
+    git \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    && docker-php-ext-install pdo_mysql zip exif pcntl bcmath gd \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# 2. Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www
+# 3. Configure Apache to use Laravel's public folder
+COPY .docker/apache.conf /etc/apache2/sites-available/000-default.conf
+RUN a2enmod rewrite
 
-# Copy app files
-COPY . .
+# 4. Copy application code and set permissions
+COPY . /var/www/html
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Install PHP dependencies
+# 5. Install Composer dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Laravel setup
-RUN php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan view:clear
-
-CMD ["php-fpm"]
+# 6. Add the script that runs when the container starts
+COPY .docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
