@@ -5,20 +5,7 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
                         <img src="{{ asset('images/HK.png') }}" alt="My App Logo" class="block h-9 w-auto">
-                        <style>
-                        .block {
-                        animation: pulseGlow 3s ease-in-out infinite;
-                        }
-
-                        @keyframes pulseGlow {
-                        0%, 100% {
-                            transform: scale(1);
-                        }
-                        50% {
-                            transform: scale(1.1);
-                        }
-                        }
-                        </style>
+                    
 
                     </a>
                 </div>
